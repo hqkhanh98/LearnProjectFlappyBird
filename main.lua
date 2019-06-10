@@ -8,21 +8,25 @@
 
 -- Start Init --
 local background
-local gameReady
 local land
-local pannel
-local medalSilver
-local medalGold
-local gameOver
+local scoreText
+
 local pipeUps
 local pipeDowns
 local holes
-local gameLoopTimer
-local createLoopTimer
-local scoreText
-local btnPlayAgain
+
+local gameReady
+
+local pannel
+local medalSilver
+local medalGold
 local pannelScoreText
 local pannelBestScoreText
+local btnPlayAgain
+local gameOver
+
+local gameLoopTimer
+local createLoopTimer
 
 local tablepipeUps = {}
 local tablepipeDowns = {}
@@ -30,16 +34,20 @@ local tableHoles = {}
 
 local pointX = display.contentCenterX
 local pointY = display.contentCenterY
+
 local yBird = pointX-50
 local xBird = pointY-50
-local Score = 0
 local bestScore = 0
 local uBird = -200
 local vBird = 0
 local wBird = -320
 local g = 800
 local delta = 0.025
+
+local Score = 0
+
 local gameStatus = 0
+-- End Init --
 
 -- Set up display group
 local backGroup = display.newGroup()
@@ -53,6 +61,15 @@ physics.setGravity( 0, 0 )
 
 -- The random number
 math.randomseed( os.time() )
+
+  -- Set up the sounds of game
+local dieSound = audio.loadSound( "Assets/Sounds/sfx_die.wav" )
+local hitSound = audio.loadSound( "Assets/Sounds/sfx_hit.wav" )
+local pointSound = audio.loadSound( "Assets/Sounds/sfx_point.wav" )
+local swooshingSound = audio.loadSound( "Assets/Sounds/sfx_swooshing.wav" )
+
+
+
 local function setUpDisplayBackGround()
   -- Set display background game
   background = display.newImageRect( backGroup, "Assets/Images/background-night.png", 768, 1024 )
@@ -93,6 +110,7 @@ local function setUpDisplayGameReady()
 end
 
 local function setUpDisplayTitleGameOver()
+  -- Set Display title game over
   titleGameOver = display.newImageRect( UIGroup, "Assets/Images/gameover.png" , 200, 60 )
   titleGameOver.x = pointX
   titleGameOver.y = pointY - 200
@@ -159,8 +177,10 @@ end
 
 local function setUpAndCreatePipe()
   -- The hole between pipeUp and pipeDown
+  local hHoles = 120
+  local hPipe = 512
   local rndNumber = math.random(300, 500)
-  holes = display.newRect( 0, 0, 0.1, 150 )
+  holes = display.newRect( 0, 0, 0.1, hHoles )
   holes.strokeWidth = 1
   holes:setFillColor( 0.5 )
   holes.alpha = 1
@@ -172,9 +192,11 @@ local function setUpAndCreatePipe()
   table.insert( tableHoles, holes )
 
   -- pipeDown
-  pipeDowns = display.newImageRect( mainGroup, "Assets/Images/pipe.png", 52, 512 )
+  pipeDowns = display.newImageRect( mainGroup, "Assets/Images/pipe.png", 52, hPipe )
   pipeDowns.x = display.contentWidth
-  pipeDowns.y = (rndNumber - 331) + 662 -- Công thức // rnd - (pipe.height/2 + holes.height/2) + pipe.height + holes.height
+  --pipeDowns.y = (rndNumber - 331) + 662 -- Công thức // rnd - (pipe.height/2 + holes.height/2) + pipe.height + holes.height
+
+  pipeDowns.y = rndNumber - ( hPipe/2 + hHoles/2 ) + hPipe + hHoles
   pipeDowns:toBack()
   table.insert( tablepipeDowns, pipeDowns )
   physics.addBody( pipeDowns, "static" )
@@ -183,7 +205,8 @@ local function setUpAndCreatePipe()
   -- pipeUp
   pipeUps = display.newImageRect( mainGroup, "Assets/Images/pipe.png", 52, 512 )
   pipeUps.x = display.contentWidth
-  pipeUps.y = (rndNumber + 331) - 662
+  --pipeUps.y = (rndNumber + 331) - 662
+  pipeUps.y = rndNumber + ( hPipe/2 + hHoles/2 ) - ( hPipe + hHoles )
   pipeUps.rotation = 180
   pipeUps:toBack()
   table.insert( tablepipeDowns, pipeUps )
@@ -215,7 +238,7 @@ local function setUpSpriteAndPhysicsBird()
     start=1,
     count=3,
     time=300,
-    loopCount = 0,
+    loopCount = 2,
     loopDirection = "forward"
   }
 
@@ -271,15 +294,19 @@ local function tabToPlay()
   yBird = pointY - 50
   gameReady.alpha = 0
   scoreText.text = Score
-  createLoopTimer = timer.performWithDelay( 2000, setUpAndCreatePipe, 0 )
+  createLoopTimer = timer.performWithDelay( 1500, setUpAndCreatePipe, 0 )
   gameStatus = 1
-  -- bird.x = pointX
-  -- bird.y = pointY
-  -- bird:play()
+  bird:play()
 end
 
 local function tabToFly()
+
   vBird = wBird
+
+  if( gameStatus == 1 ) then
+    audio.play( swooshingSound )
+    bird:play()
+  end
 end
 
 local function onCollision( event )
@@ -293,9 +320,11 @@ local function onCollision( event )
          ( obj_1.myName ==  "bird" and obj_2.myName == "land" ) or
          ( obj_1.myName ==  "land" and obj_2.myName == "bird" ) ) then
            gameStatus = 2
+           audio.play( hitSound )
     elseif ( ( obj_1.myName == "bird" and obj_2.myName == "holes" ) or
              ( obj_1.myName == "holes" and obj_2.myName == "bird" ) ) then
               Score = Score + 1
+              audio.play( pointSound )
               for i = #tableHoles, 1, -1 do
                 local thisHole = tableHoles[i]
                 if ( thisHole == obj_1 or thisHole == obj_2 ) then
@@ -352,6 +381,7 @@ local function gameOver()
   saveBestScore()
   loadBestScore()
   clearAll()
+  audio.play( dieSound )
 end
 
 -- THE NEXT FUNCTION GAMELOOP FOR CREATE PIPE
